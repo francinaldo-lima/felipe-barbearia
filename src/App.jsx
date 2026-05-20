@@ -863,7 +863,18 @@ function ClientBooking({ services, barbers }) {
     if(!name||!phone) return;
     const dateStr=date?`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`:"";
     const dateFormatted=date?`${WEEKDAYS[date.getDay()]}, ${date.getDate()}/${date.getMonth()+1}`:"";
+
+    // Salva agendamento
     await addDoc(collection(db,"appointments"),{ client:name, phone, service:service.name, barber:barber.name, date:dateStr, time, price:service.price, status:"confirmed", createdAt:new Date().toISOString() });
+
+    // Cadastra cliente automaticamente se ainda não existir
+    const { getDocs, query, where } = await import("firebase/firestore");
+    const q = query(collection(db,"clients"), where("phone","==",phone.replace(/\D/g,"")));
+    const snap = await getDocs(q);
+    if(snap.empty){
+      await addDoc(collection(db,"clients"),{ name, phone:phone.replace(/\D/g,""), birthday:"", createdAt:new Date().toISOString() });
+    }
+
     // Abre WhatsApp com mensagem automática para Felipe
     const msg=`💈 *Novo Agendamento - Felipe Barbearia*\n\n👤 *Cliente:* ${name}\n📱 *WhatsApp:* ${phone}\n✂️ *Serviço:* ${service.name}\n👨 *Barbeiro:* ${barber.name}\n📅 *Data:* ${dateFormatted}\n🕐 *Horário:* ${time}\n💰 *Valor:* R$ ${service.price}\n\n_Agendado pelo sistema online_`;
     window.open(`https://wa.me/${WHATSAPP_FELIPE}?text=${encodeURIComponent(msg)}`,"_blank");
