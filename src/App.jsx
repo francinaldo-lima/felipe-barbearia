@@ -572,6 +572,17 @@ function AdminClientes({ appointments }) {
   const openEdit=c=>{ setEditId(c.id); setForm({ name:c.name, phone:c.phone||"", birthday:c.birthday||"" }); setShowModal(true); };
   const openNew=()=>{ setEditId(null); setForm({ name:"", phone:"", birthday:"" }); setShowModal(true); };
 
+  const excluirCliente=async(c)=>{
+    if(!window.confirm(`Excluir ${c.name} e todos os agendamentos? Esta ação não pode ser desfeita.`)) return;
+    // Remove cadastro manual se existir
+    if(c.id) await deleteDoc(doc(db,"clients",c.id));
+    // Remove todos os agendamentos do cliente
+    const { getDocs, query, where } = await import("firebase/firestore");
+    const q=query(collection(db,"appointments"),where("client","==",c.name));
+    const snap=await getDocs(q);
+    for(const d of snap.docs) await deleteDoc(doc(db,"appointments",d.id));
+  };
+
   const formatBirthday=b=>{
     if(!b) return null;
     const [y,m,d]=b.split("-");
@@ -623,7 +634,7 @@ function AdminClientes({ appointments }) {
                         style={{ display:"flex", alignItems:"center", background:"#25D36618", color:"#25D366", border:"1px solid #25D36633", padding:"6px 10px", borderRadius:9, fontSize:12, fontWeight:700, textDecoration:"none" }}>💬</a>
                     )}
                     {c.id&&<Btn variant="outline" onClick={()=>openEdit(c)} style={{ fontSize:11, padding:"6px 10px" }}>✏</Btn>}
-                    {c.id&&<Btn variant="danger" onClick={()=>deleteDoc(doc(db,"clients",c.id))} style={{ fontSize:11, padding:"6px 10px" }}>✕</Btn>}
+                    <Btn variant="danger" onClick={()=>excluirCliente(c)} style={{ fontSize:11, padding:"6px 10px" }}>✕</Btn>
                   </div>
                 </div>
               </div>
