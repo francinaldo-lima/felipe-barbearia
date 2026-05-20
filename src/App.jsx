@@ -535,7 +535,7 @@ function AdminClientes({ appointments }) {
     }
   });
 
-  const filtered=merged.filter(c=>c.name?.toLowerCase().includes(search.toLowerCase()));
+  const filtered=merged.filter(c=>c.name?.toLowerCase().includes(search.toLowerCase())).sort((a,b)=>a.name?.localeCompare(b.name,"pt-BR"));
 
   // Aniversariantes com dias restantes calculados
   const mesAtual=new Date().getMonth()+1;
