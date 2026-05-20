@@ -493,201 +493,43 @@ function AdminEquipe({ barbers, appointments }) {
 function AdminClientes({ appointments }) {
   const w=useWidth();
   const [search,setSearch]=useState("");
-  const [clientes,setClientes]=useState([]);
-  const [showModal,setShowModal]=useState(false);
-  const [editId,setEditId]=useState(null);
-  const [form,setForm]=useState({ name:"", phone:"", birthday:"" });
-  const [aba,setAba]=useState("lista"); // "lista" | "aniversarios"
-
-  // Carrega clientes do Firebase
-  useEffect(()=>{
-    const u=onSnapshot(collection(db,"clients"),snap=>{
-      setClientes(snap.docs.map(d=>({id:d.id,...d.data()})));
-    });
-    return()=>u();
-  },[]);
-
-  // Mescla dados de agendamentos com cadastro
   const clientMap={};
   appointments.forEach(a=>{
-    const key=a.client?.toLowerCase().trim();
-    if(!clientMap[key]) clientMap[key]={ name:a.client, phone:a.phone||"—", visits:0, total:0, last:a.date };
-    clientMap[key].visits++;
-    clientMap[key].total+=Number(a.price);
-    if(a.date>clientMap[key].last) clientMap[key].last=a.date;
+    if(!clientMap[a.client]) clientMap[a.client]={ name:a.client, phone:a.phone||"—", visits:0, total:0, last:a.date };
+    clientMap[a.client].visits++;
+    clientMap[a.client].total+=Number(a.price);
+    if(a.date>clientMap[a.client].last) clientMap[a.client].last=a.date;
   });
-
-  // Combina com cadastro manual
-  const merged=clientes.map(c=>({
-    ...c,
-    ...(clientMap[c.name?.toLowerCase().trim()]||{}),
-    id:c.id,
-    name:c.name,
-    phone:c.phone,
-    birthday:c.birthday||"",
-  }));
-
-  // Clientes de appointments sem cadastro manual
-  Object.values(clientMap).forEach(cm=>{
-    if(!merged.find(m=>m.name?.toLowerCase().trim()===cm.name?.toLowerCase().trim())){
-      merged.push({ ...cm, id:null, birthday:"" });
-    }
-  });
-
-  const filtered=merged.filter(c=>c.name?.toLowerCase().includes(search.toLowerCase()));
-
-  // Aniversariantes do mês atual
-  const mesAtual=new Date().getMonth()+1;
-  const diaAtual=new Date().getDate();
-  const aniversariantes=merged
-    .filter(c=>c.birthday)
-    .map(c=>{
-      const [y,m,d]=c.birthday.split("-");
-      return {...c, mesAniv:Number(m), diaAniv:Number(d)};
-    })
-    .sort((a,b)=>a.mesAniv-b.mesAniv||a.diaAniv-b.diaAniv);
-  const anivHoje=aniversariantes.filter(c=>c.mesAniv===mesAtual&&c.diaAniv===diaAtual);
-  const anivMes=aniversariantes.filter(c=>c.mesAniv===mesAtual);
-
-  const msgAniversario=(c)=>`🎂 *Feliz Aniversário, ${c.name}!* 🎉\n\nA equipe da *Felipe Barbearia* deseja a você um dia incrível! 💈✂️\n\nComo presente especial, temos uma surpresa para você na sua próxima visita. Apareça por aqui! 😊\n\n_Felipe Barbearia — Seu estilo, no seu tempo_`;
-
-  const saveCliente=async()=>{
-    if(!form.name||!form.phone) return;
-    if(editId){
-      await updateDoc(doc(db,"clients",editId),{ name:form.name, phone:form.phone, birthday:form.birthday });
-    } else {
-      await addDoc(collection(db,"clients"),{ name:form.name, phone:form.phone, birthday:form.birthday });
-    }
-    setShowModal(false); setEditId(null); setForm({ name:"", phone:"", birthday:"" });
-  };
-
-  const openEdit=c=>{ setEditId(c.id); setForm({ name:c.name, phone:c.phone||"", birthday:c.birthday||"" }); setShowModal(true); };
-  const openNew=()=>{ setEditId(null); setForm({ name:"", phone:"", birthday:"" }); setShowModal(true); };
-
-  const formatBirthday=b=>{
-    if(!b) return null;
-    const [y,m,d]=b.split("-");
-    return `${d}/${m}/${y}`;
-  };
+  const clients=Object.values(clientMap).filter(c=>c.name?.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div>
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:18, flexWrap:"wrap", gap:10 }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:22, flexWrap:"wrap", gap:10 }}>
         <div>
           <h2 style={{ fontFamily:"'Bebas Neue',sans-serif", color:G.text, fontSize:28, margin:0, letterSpacing:1 }}>Clientes</h2>
-          <p style={{ color:G.muted, margin:"4px 0 0", fontSize:13 }}>{filtered.length} cliente(s) {anivHoje.length>0&&<span style={{ color:"#FFD700", marginLeft:6 }}>🎂 {anivHoje.length} aniversariante(s) hoje!</span>}</p>
+          <p style={{ color:G.muted, margin:"4px 0 0", fontSize:13 }}>{clients.length} cliente(s)</p>
         </div>
-        <Btn onClick={openNew}>+ Cadastrar Cliente</Btn>
+        <input placeholder="🔍 Buscar..." value={search} onChange={e=>setSearch(e.target.value)}
+          style={{ background:G.card, border:`1px solid ${G.border}`, color:G.text, padding:"9px 14px", borderRadius:10, fontSize:13, fontFamily:"inherit", width:w<500?"100%":180, outline:"none" }} />
       </div>
-
-      {/* Abas */}
-      <div style={{ display:"flex", gap:8, marginBottom:20 }}>
-        {[{id:"lista",label:"📋 Lista"},{ id:"aniversarios",label:`🎂 Aniversários${anivHoje.length>0?` (${anivHoje.length})`:""}` }].map(a=>(
-          <button key={a.id} onClick={()=>setAba(a.id)}
-            style={{ padding:"8px 16px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"inherit", background:aba===a.id?`linear-gradient(135deg,${G.accent},${G.accentD})`:"transparent", color:aba===a.id?"#fff":G.muted, border:aba===a.id?"none":`1px solid ${G.border}` }}>
-            {a.label}
-          </button>
-        ))}
-        {aba==="lista"&&(
-          <input placeholder="🔍 Buscar..." value={search} onChange={e=>setSearch(e.target.value)}
-            style={{ background:G.card, border:`1px solid ${G.border}`, color:G.text, padding:"8px 14px", borderRadius:10, fontSize:13, fontFamily:"inherit", marginLeft:"auto", width:w<500?"100%":170, outline:"none" }} />
-        )}
-      </div>
-
-      {/* ABA LISTA */}
-      {aba==="lista"&&(
-        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-          {filtered.map((c,i)=>(
-            <div key={c.id||i} style={{ background:G.card, border:`1px solid ${G.border}`, borderRadius:12, padding:"14px 16px" }}>
-              <div style={{ display:"flex", alignItems:"center", gap:12, flexWrap:"wrap" }}>
-                <div style={{ width:42, height:42, borderRadius:"50%", background:`linear-gradient(135deg,${G.accent},${G.accentD})`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, fontWeight:800, color:"#fff", flexShrink:0 }}>{c.name?.[0]}</div>
-                <div style={{ flex:1, minWidth:100 }}>
-                  <div style={{ color:G.text, fontWeight:700, fontSize:14 }}>{c.name} {c.birthday&&<span style={{ fontSize:11 }}>🎂</span>}</div>
-                  <div style={{ color:G.muted, fontSize:12 }}>{c.phone}</div>
-                  {c.birthday&&<div style={{ color:G.accent, fontSize:11, marginTop:2 }}>Aniversário: {formatBirthday(c.birthday)}</div>}
-                </div>
-                <div style={{ display:"flex", gap:12, alignItems:"center", flexWrap:"wrap" }}>
-                  <div style={{ textAlign:"center" }}><div style={{ color:G.accent, fontWeight:800, fontSize:18 }}>{c.visits||0}</div><div style={{ color:G.muted, fontSize:10 }}>visitas</div></div>
-                  <div style={{ textAlign:"center" }}><div style={{ color:G.text, fontWeight:700, fontSize:13 }}>R$ {c.total||0}</div><div style={{ color:G.muted, fontSize:10 }}>total</div></div>
-                  <div style={{ display:"flex", gap:6 }}>
-                    {c.phone&&c.phone!=="—"&&(
-                      <a href={`https://wa.me/55${c.phone.replace(/\D/g,"")}?text=${encodeURIComponent(`Olá ${c.name}! Tudo bem? Aqui é da Felipe Barbearia. 💈`)}`} target="_blank" rel="noreferrer"
-                        style={{ display:"flex", alignItems:"center", background:"#25D36618", color:"#25D366", border:"1px solid #25D36633", padding:"6px 10px", borderRadius:9, fontSize:12, fontWeight:700, textDecoration:"none" }}>💬</a>
-                    )}
-                    {c.id&&<Btn variant="outline" onClick={()=>openEdit(c)} style={{ fontSize:11, padding:"6px 10px" }}>✏</Btn>}
-                    {c.id&&<Btn variant="danger" onClick={()=>deleteDoc(doc(db,"clients",c.id))} style={{ fontSize:11, padding:"6px 10px" }}>✕</Btn>}
-                  </div>
-                </div>
+      <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+        {clients.map(c=>(
+          <div key={c.name} style={{ background:G.card, border:`1px solid ${G.border}`, borderRadius:12, padding:"14px 16px" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:14, flexWrap:"wrap" }}>
+              <div style={{ width:42, height:42, borderRadius:"50%", background:`linear-gradient(135deg,${G.accent},${G.accentD})`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, fontWeight:800, color:"#fff", flexShrink:0 }}>{c.name[0]}</div>
+              <div style={{ flex:1, minWidth:100 }}>
+                <div style={{ color:G.text, fontWeight:700, fontSize:14 }}>{c.name}</div>
+                <div style={{ color:G.muted, fontSize:12 }}>{c.phone}</div>
+              </div>
+              <div style={{ display:"flex", gap:16, flexWrap:"wrap" }}>
+                <div style={{ textAlign:"center" }}><div style={{ color:G.accent, fontWeight:800, fontSize:18 }}>{c.visits}</div><div style={{ color:G.muted, fontSize:10 }}>visitas</div></div>
+                <div style={{ textAlign:"center" }}><div style={{ color:G.text, fontWeight:700, fontSize:14 }}>R$ {c.total}</div><div style={{ color:G.muted, fontSize:10 }}>total</div></div>
+                <div style={{ textAlign:"right" }}><div style={{ color:G.muted, fontSize:10 }}>Última visita</div><div style={{ color:G.accent, fontSize:12, fontWeight:600 }}>{c.last}</div></div>
               </div>
             </div>
-          ))}
-        </div>
-      )}
-
-      {/* ABA ANIVERSÁRIOS */}
-      {aba==="aniversarios"&&(
-        <div>
-          {anivHoje.length>0&&(
-            <div style={{ background:"#FFD70018", border:"1px solid #FFD70044", borderRadius:14, padding:16, marginBottom:18 }}>
-              <div style={{ color:"#FFD700", fontWeight:700, fontSize:15, marginBottom:12 }}>🎂 Aniversariantes HOJE!</div>
-              {anivHoje.map((c,i)=>(
-                <div key={i} style={{ display:"flex", alignItems:"center", gap:12, marginBottom:10, flexWrap:"wrap" }}>
-                  <div style={{ width:38, height:38, borderRadius:"50%", background:"linear-gradient(135deg,#FFD700,#FFA500)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, fontWeight:800, color:"#000", flexShrink:0 }}>{c.name?.[0]}</div>
-                  <div style={{ flex:1 }}>
-                    <div style={{ color:G.text, fontWeight:700, fontSize:14 }}>{c.name}</div>
-                    <div style={{ color:G.muted, fontSize:12 }}>{c.phone}</div>
-                  </div>
-                  {c.phone&&c.phone!=="—"&&(
-                    <a href={`https://wa.me/55${c.phone.replace(/\D/g,"")}?text=${encodeURIComponent(msgAniversario(c))}`} target="_blank" rel="noreferrer"
-                      style={{ display:"flex", alignItems:"center", gap:6, background:"#25D366", color:"#fff", border:"none", padding:"8px 14px", borderRadius:10, fontSize:12, fontWeight:700, textDecoration:"none" }}>
-                      💬 Enviar parabéns
-                    </a>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div style={{ color:G.accent, fontSize:10, letterSpacing:2, textTransform:"uppercase", fontWeight:700, marginBottom:14 }}>Todos os aniversários</div>
-          {aniversariantes.length===0&&<div style={{ color:G.muted, textAlign:"center", padding:"40px 0" }}>Nenhum cliente com aniversário cadastrado.</div>}
-          <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-            {aniversariantes.map((c,i)=>{
-              const isHoje=c.mesAniv===mesAtual&&c.diaAniv===diaAtual;
-              const isMesAtual=c.mesAniv===mesAtual;
-              return (
-                <div key={i} style={{ background:G.card, border:`1px solid ${isHoje?"#FFD700":isMesAtual?G.borderM:G.border}`, borderRadius:12, padding:"12px 16px", display:"flex", alignItems:"center", gap:12, flexWrap:"wrap" }}>
-                  <div style={{ fontSize:22 }}>{isHoje?"🎂":"🎁"}</div>
-                  <div style={{ flex:1 }}>
-                    <div style={{ color:G.text, fontWeight:700, fontSize:14 }}>{c.name} {isHoje&&<span style={{ color:"#FFD700", fontSize:11 }}>• HOJE!</span>}{isMesAtual&&!isHoje&&<span style={{ color:G.accent, fontSize:11 }}>• Este mês</span>}</div>
-                    <div style={{ color:G.muted, fontSize:12 }}>{c.phone} · {c.diaAniv.toString().padStart(2,"0")}/{c.mesAniv.toString().padStart(2,"0")}</div>
-                  </div>
-                  {c.phone&&c.phone!=="—"&&(
-                    <a href={`https://wa.me/55${c.phone.replace(/\D/g,"")}?text=${encodeURIComponent(msgAniversario(c))}`} target="_blank" rel="noreferrer"
-                      style={{ display:"flex", alignItems:"center", gap:5, background:"#25D36618", color:"#25D366", border:"1px solid #25D36633", padding:"7px 12px", borderRadius:9, fontSize:12, fontWeight:700, textDecoration:"none" }}>
-                      💬 Parabéns
-                    </a>
-                  )}
-                </div>
-              );
-            })}
           </div>
-        </div>
-      )}
-
-      {/* Modal cadastro/edição */}
-      {showModal&&(
-        <Modal title={editId?"Editar Cliente":"Cadastrar Cliente"} onClose={()=>{ setShowModal(false); setEditId(null); }}>
-          <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-            <Field label="Nome completo" value={form.name} onChange={v=>setForm(p=>({...p,name:v}))} placeholder="Nome do cliente" />
-            <Field label="WhatsApp" value={form.phone} onChange={v=>setForm(p=>({...p,phone:v}))} placeholder="(99) 9 9999-9999" />
-            <Field label="Data de Nascimento" value={form.birthday} onChange={v=>setForm(p=>({...p,birthday:v}))} type="date" />
-          </div>
-          <div style={{ display:"flex", gap:8, marginTop:20 }}>
-            <Btn variant="ghost" onClick={()=>{ setShowModal(false); setEditId(null); }} style={{ flex:1 }}>Cancelar</Btn>
-            <Btn onClick={saveCliente} style={{ flex:2 }}>{editId?"Salvar":"Cadastrar"}</Btn>
-          </div>
-        </Modal>
-      )}
+        ))}
+      </div>
     </div>
   );
 }
