@@ -611,7 +611,7 @@ function AdminClientes({ appointments }) {
                   <div style={{ textAlign:"center" }}><div style={{ color:G.text, fontWeight:700, fontSize:13 }}>R$ {c.total||0}</div><div style={{ color:G.muted, fontSize:10 }}>total</div></div>
                   <div style={{ display:"flex", gap:6 }}>
                     {c.phone&&c.phone!=="—"&&(
-                      <a href={`https://wa.me/55${c.phone.replace(/\D/g,"")}?text=${encodeURIComponent(`Olá ${c.name}! Tudo bem? Aqui é da Felipe Barbearia. 💈`)}`} target="_blank" rel="noreferrer"
+                      <a href={`https://wa.me/55${c.phone.replace(/\D/g,"")}?text=${encodeURIComponent(`Olá ${c.name}! Tudo bem? Aqui é o Felipe Barbearia. 💈\n\nTenho um desconto para você na sua próxima visita. Apareça por aqui! 😊\n\n💈 *FELIPE BARBEARIA* ✂️\nSeu estilo, no seu tempo\nhttps://felipebarbearia.vercel.app`)}`} target="_blank" rel="noreferrer"
                         style={{ display:"flex", alignItems:"center", background:"#25D36618", color:"#25D366", border:"1px solid #25D36633", padding:"6px 10px", borderRadius:9, fontSize:12, fontWeight:700, textDecoration:"none" }}>💬</a>
                     )}
                     {c.id&&<Btn variant="outline" onClick={()=>openEdit(c)} style={{ fontSize:11, padding:"6px 10px" }}>✏</Btn>}
