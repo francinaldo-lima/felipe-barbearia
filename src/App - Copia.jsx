@@ -18,7 +18,6 @@ const WEEKDAYS  = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
 const MONTHS    = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 const TODAY     = new Date().toISOString().split("T")[0];
 const AVATAR_COLORS = ["#FF6B00","#e85d04","#f48c06","#f72585","#7209b7","#3a86ff","#06d6a0"];
-const WHATSAPP_FELIPE = "5599984575092";
 
 const DEFAULT_SERVICES = [
   { name:"Corte Clássico", duration:30, price:45, icon:"✂️", desc:"Corte tradicional com acabamento perfeito" },
@@ -286,10 +285,6 @@ function AdminAgenda({ appointments, services, barbers }) {
                     </div>
                     <div style={{ display:"flex", gap:6 }}>
                       {apt.status!=="done"&&<Btn variant="success" onClick={()=>updateDoc(doc(db,"appointments",apt.id),{status:"done"})}>✓</Btn>}
-                      <a href={`https://wa.me/${WHATSAPP_FELIPE}?text=${encodeURIComponent(`💈 *Felipe Barbearia*\n\n✅ Confirmando seu agendamento:\n\n👤 ${apt.client}\n✂️ ${apt.service}\n👨 ${apt.barber}\n📅 ${apt.date}\n🕐 ${apt.time}\n💰 R$ ${apt.price}\n\nTe esperamos! 😊`)}`} target="_blank" rel="noreferrer"
-                        style={{ display:"flex", alignItems:"center", gap:4, background:"#25D36618", color:"#25D366", border:"1px solid #25D36633", padding:"7px 10px", borderRadius:10, fontSize:12, fontWeight:700, textDecoration:"none" }}>
-                        💬
-                      </a>
                       <Btn variant="danger" onClick={()=>deleteDoc(doc(db,"appointments",apt.id))}>✕</Btn>
                     </div>
                   </div>
@@ -704,11 +699,7 @@ function ClientBooking({ services, barbers }) {
   const confirm=async()=>{
     if(!name||!phone) return;
     const dateStr=date?`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`:"";
-    const dateFormatted=date?`${WEEKDAYS[date.getDay()]}, ${date.getDate()}/${date.getMonth()+1}`:"";
     await addDoc(collection(db,"appointments"),{ client:name, phone, service:service.name, barber:barber.name, date:dateStr, time, price:service.price, status:"confirmed", createdAt:new Date().toISOString() });
-    // Abre WhatsApp com mensagem automática para Felipe
-    const msg=`💈 *Novo Agendamento - Felipe Barbearia*\n\n👤 *Cliente:* ${name}\n📱 *WhatsApp:* ${phone}\n✂️ *Serviço:* ${service.name}\n👨 *Barbeiro:* ${barber.name}\n📅 *Data:* ${dateFormatted}\n🕐 *Horário:* ${time}\n💰 *Valor:* R$ ${service.price}\n\n_Agendado pelo sistema online_`;
-    window.open(`https://wa.me/${WHATSAPP_FELIPE}?text=${encodeURIComponent(msg)}`,"_blank");
     setDone(true);
   };
 
@@ -726,12 +717,6 @@ function ClientBooking({ services, barbers }) {
             </div>
           ))}
         </div>
-        {/* Botão WhatsApp */}
-        <a href={`https://wa.me/${WHATSAPP_FELIPE}?text=${encodeURIComponent(`💈 *Novo Agendamento - Felipe Barbearia*\n\n👤 *Cliente:* ${name}\n✂️ *Serviço:* ${service?.name}\n👨 *Barbeiro:* ${barber?.name}\n📅 *Data:* ${date?`${WEEKDAYS[date.getDay()]}, ${date.getDate()}/${date.getMonth()+1}`:""}\n🕐 *Horário:* ${time}\n💰 *Valor:* R$ ${service?.price}`)}`}
-          target="_blank" rel="noreferrer"
-          style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, background:"#25D366", color:"#fff", padding:"13px", borderRadius:12, fontWeight:800, fontSize:14, textDecoration:"none", marginBottom:10 }}>
-          <span style={{ fontSize:18 }}>💬</span> Enviar confirmação no WhatsApp
-        </a>
         <Btn onClick={reset} style={{ width:"100%", padding:"13px", fontSize:14 }}>Fazer novo agendamento</Btn>
       </div>
     </div>
