@@ -498,6 +498,7 @@ function AdminClientes({ appointments }) {
   const [editId,setEditId]=useState(null);
   const [form,setForm]=useState({ name:"", phone:"", birthday:"" });
   const [aba,setAba]=useState("lista"); // "lista" | "aniversarios"
+  const [filtroDias,setFiltroDias]=useState(30);
 
   // Carrega clientes do Firebase
   useEffect(()=>{
@@ -536,18 +537,25 @@ function AdminClientes({ appointments }) {
 
   const filtered=merged.filter(c=>c.name?.toLowerCase().includes(search.toLowerCase()));
 
-  // Aniversariantes do mês atual
+  // Aniversariantes com dias restantes calculados
   const mesAtual=new Date().getMonth()+1;
   const diaAtual=new Date().getDate();
   const aniversariantes=merged
     .filter(c=>c.birthday)
     .map(c=>{
       const [y,m,d]=c.birthday.split("-");
-      return {...c, mesAniv:Number(m), diaAniv:Number(d)};
+      const mesAniv=Number(m); const diaAniv=Number(d);
+      // Calcula dias restantes até o próximo aniversário
+      const hoje=new Date(); hoje.setHours(0,0,0,0);
+      const proxAniv=new Date(hoje.getFullYear(),mesAniv-1,diaAniv);
+      if(proxAniv<hoje) proxAniv.setFullYear(hoje.getFullYear()+1);
+      const diasRestantes=Math.round((proxAniv-hoje)/(1000*60*60*24));
+      return {...c, mesAniv, diaAniv, diasRestantes};
     })
-    .sort((a,b)=>a.mesAniv-b.mesAniv||a.diaAniv-b.diaAniv);
-  const anivHoje=aniversariantes.filter(c=>c.mesAniv===mesAtual&&c.diaAniv===diaAtual);
-  const anivMes=aniversariantes.filter(c=>c.mesAniv===mesAtual);
+    .sort((a,b)=>a.diasRestantes-b.diasRestantes);
+
+  const anivHoje=aniversariantes.filter(c=>c.diasRestantes===0);
+  const anivFiltrados=filtroDias===999?aniversariantes:aniversariantes.filter(c=>c.diasRestantes<=filtroDias);
 
   const msgAniversario=(c)=>`🎂 *Feliz Aniversário, ${c.name}!* 🎉\n\nA equipe da Felipe Barbearia deseja a você um dia incrível! 💈✂️\n\nComo presente especial, temos uma surpresa para você na sua próxima visita.\n\nApareça por aqui! 😊\n\n💈 *FELIPE BARBEARIA* ✂️\nSeu estilo, no seu tempo https://felipebarbearia.vercel.app`;
 
@@ -627,7 +635,18 @@ function AdminClientes({ appointments }) {
       {/* ABA ANIVERSÁRIOS */}
       {aba==="aniversarios"&&(
         <div>
-          {anivHoje.length>0&&(
+          {/* Filtro de dias */}
+          <div style={{ display:"flex", gap:8, marginBottom:20, flexWrap:"wrap" }}>
+            {[{v:0,label:"🎂 Hoje"},{v:7,label:"📅 7 dias"},{v:15,label:"📅 15 dias"},{v:30,label:"📅 30 dias"},{v:999,label:"📋 Todos"}].map(f=>(
+              <button key={f.v} onClick={()=>setFiltroDias(f.v)}
+                style={{ padding:"7px 14px", borderRadius:10, fontWeight:700, fontSize:12, cursor:"pointer", fontFamily:"inherit", background:filtroDias===f.v?`linear-gradient(135deg,${G.accent},${G.accentD})`:"transparent", color:filtroDias===f.v?"#fff":G.muted, border:filtroDias===f.v?"none":`1px solid ${G.border}` }}>
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Aniversariantes hoje em destaque */}
+          {anivHoje.length>0&&filtroDias!==999&&(
             <div style={{ background:"#FFD70018", border:"1px solid #FFD70044", borderRadius:14, padding:16, marginBottom:18 }}>
               <div style={{ color:"#FFD700", fontWeight:700, fontSize:15, marginBottom:12 }}>🎂 Aniversariantes HOJE!</div>
               {anivHoje.map((c,i)=>(
@@ -648,29 +667,39 @@ function AdminClientes({ appointments }) {
             </div>
           )}
 
-          <div style={{ color:G.accent, fontSize:10, letterSpacing:2, textTransform:"uppercase", fontWeight:700, marginBottom:14 }}>Todos os aniversários</div>
-          {aniversariantes.length===0&&<div style={{ color:G.muted, textAlign:"center", padding:"40px 0" }}>Nenhum cliente com aniversário cadastrado.</div>}
-          <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-            {aniversariantes.map((c,i)=>{
-              const isHoje=c.mesAniv===mesAtual&&c.diaAniv===diaAtual;
-              const isMesAtual=c.mesAniv===mesAtual;
-              return (
-                <div key={i} style={{ background:G.card, border:`1px solid ${isHoje?"#FFD700":isMesAtual?G.borderM:G.border}`, borderRadius:12, padding:"12px 16px", display:"flex", alignItems:"center", gap:12, flexWrap:"wrap" }}>
-                  <div style={{ fontSize:22 }}>{isHoje?"🎂":"🎁"}</div>
-                  <div style={{ flex:1 }}>
-                    <div style={{ color:G.text, fontWeight:700, fontSize:14 }}>{c.name} {isHoje&&<span style={{ color:"#FFD700", fontSize:11 }}>• HOJE!</span>}{isMesAtual&&!isHoje&&<span style={{ color:G.accent, fontSize:11 }}>• Este mês</span>}</div>
-                    <div style={{ color:G.muted, fontSize:12 }}>{c.phone} · {c.diaAniv.toString().padStart(2,"0")}/{c.mesAniv.toString().padStart(2,"0")}</div>
-                  </div>
-                  {c.phone&&c.phone!=="—"&&(
-                    <a href={`https://wa.me/55${c.phone.replace(/\D/g,"")}?text=${encodeURIComponent(msgAniversario(c))}`} target="_blank" rel="noreferrer"
-                      style={{ display:"flex", alignItems:"center", gap:5, background:"#25D36618", color:"#25D366", border:"1px solid #25D36633", padding:"7px 12px", borderRadius:9, fontSize:12, fontWeight:700, textDecoration:"none" }}>
-                      💬 Parabéns
-                    </a>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          {/* Lista filtrada */}
+          {anivFiltrados.length===0
+            ? <div style={{ textAlign:"center", color:G.muted, padding:"50px 0" }}>
+                <div style={{ fontSize:36, marginBottom:10 }}>🎁</div>
+                {filtroDias===0?"Nenhum aniversariante hoje.":filtroDias===999?"Nenhum cliente com aniversário cadastrado.":`Nenhum aniversariante nos próximos ${filtroDias} dias.`}
+              </div>
+            : <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                {anivFiltrados.map((c,i)=>{
+                  const isHoje=c.diasRestantes===0;
+                  const isProximo=c.diasRestantes<=7;
+                  return (
+                    <div key={i} style={{ background:G.card, border:`1px solid ${isHoje?"#FFD700":isProximo?G.borderM:G.border}`, borderRadius:12, padding:"14px 16px", display:"flex", alignItems:"center", gap:12, flexWrap:"wrap" }}>
+                      <div style={{ fontSize:24 }}>{isHoje?"🎂":"🎁"}</div>
+                      <div style={{ flex:1 }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+                          <span style={{ color:G.text, fontWeight:700, fontSize:14 }}>{c.name}</span>
+                          {isHoje&&<span style={{ background:"#FFD70022", color:"#FFD700", border:"1px solid #FFD70044", padding:"2px 8px", borderRadius:20, fontSize:10, fontWeight:700 }}>HOJE! 🎂</span>}
+                          {!isHoje&&c.diasRestantes<=7&&<span style={{ background:G.accent+"22", color:G.accent, border:`1px solid ${G.accent}44`, padding:"2px 8px", borderRadius:20, fontSize:10, fontWeight:700 }}>em {c.diasRestantes} dia{c.diasRestantes>1?"s":""}</span>}
+                          {!isHoje&&c.diasRestantes>7&&<span style={{ color:G.muted, fontSize:11 }}>em {c.diasRestantes} dias</span>}
+                        </div>
+                        <div style={{ color:G.muted, fontSize:12, marginTop:2 }}>{c.phone} · {c.diaAniv.toString().padStart(2,"0")}/{c.mesAniv.toString().padStart(2,"0")}</div>
+                      </div>
+                      {c.phone&&c.phone!=="—"&&(
+                        <a href={`https://wa.me/55${c.phone.replace(/\D/g,"")}?text=${encodeURIComponent(msgAniversario(c))}`} target="_blank" rel="noreferrer"
+                          style={{ display:"flex", alignItems:"center", gap:5, background:isHoje?"#25D366":"#25D36618", color:isHoje?"#fff":"#25D366", border:isHoje?"none":"1px solid #25D36633", padding:"8px 14px", borderRadius:9, fontSize:12, fontWeight:700, textDecoration:"none" }}>
+                          💬 {isHoje?"Enviar parabéns":"Parabéns"}
+                        </a>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+          }
         </div>
       )}
 
