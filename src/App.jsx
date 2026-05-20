@@ -549,7 +549,7 @@ function AdminClientes({ appointments }) {
   const anivHoje=aniversariantes.filter(c=>c.mesAniv===mesAtual&&c.diaAniv===diaAtual);
   const anivMes=aniversariantes.filter(c=>c.mesAniv===mesAtual);
 
-  const msgAniversario=(c)=>`🎂 *Feliz Aniversário, ${c.name}!* 🎉\n\nA equipe da *Felipe Barbearia* deseja a você um dia incrível! 💈✂️\n\nComo presente especial, temos uma surpresa para você na sua próxima visita. Apareça por aqui! 😊\n\n_Felipe Barbearia — Seu estilo, no seu tempo_`;
+  const msgAniversario=(c)=>`🎂 *Feliz Aniversário, ${c.name}!* 🎉\n\nA equipe da *Felipe Barbearia* deseja a você um dia incrível! 💈✂️\n\nComo presente especial, temos uma surpresa para você na sua próxima visita. Apareça por aqui! 😊\n\n💈 *Felipe Barbearia* ✂️\n_Seu estilo, no seu tempo_\nhttps://felipebarbearia.vercel.app`;
 
   const saveCliente=async()=>{
     if(!form.name||!form.phone) return;
