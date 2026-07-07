@@ -572,22 +572,42 @@ function AdminClientes({ appointments }) {
   const openEdit=c=>{ setEditId(c.id); setForm({ name:c.name, phone:c.phone||"", birthday:c.birthday||"" }); setShowModal(true); };
   const openNew=()=>{ setEditId(null); setForm({ name:"", phone:"", birthday:"" }); setShowModal(true); };
 
-  const excluirCliente=async(c)=>{
-    if(!window.confirm(`Excluir ${c.name} e todos os agendamentos? Esta ação não pode ser desfeita.`)) return;
-    // Remove cadastro manual se existir
-    if(c.id) await deleteDoc(doc(db,"clients",c.id));
-    // Remove todos os agendamentos do cliente
-    const { getDocs, query, where } = await import("firebase/firestore");
-    const q=query(collection(db,"appointments"),where("client","==",c.name));
-    const snap=await getDocs(q);
-    for(const d of snap.docs) await deleteDoc(doc(db,"appointments",d.id));
-  };
+  const excluirCliente = async (c) => {
+  if (!window.confirm(`Excluir ${c.name} e todos os agendamentos? Esta ação não pode ser desfeita.`)) return;
 
-  const formatBirthday=b=>{
-    if(!b) return null;
-    const [y,m,d]=b.split("-");
-    return `${d}/${m}/${y}`;
-  };
+  try {
+    // 1. Importar as ferramentas necessárias do Firestore
+    const { getDocs, query, collection, where, writeBatch, doc } = await import("firebase/firestore");
+    
+    // Inicializa o Batch (Lote)
+    const batch = writeBatch(db);
+
+    // 2. Adiciona a remoção do cliente ao lote
+    if (c.id) {
+      const clientRef = doc(db, "clients", c.id);
+      batch.delete(clientRef);
+    }
+
+    // 3. Busca os agendamentos vinculados pelo ID do cliente (Mais seguro que o Nome)
+    // NOTA: Certifique-se de que seus agendamentos salvam o campo "clientId"
+    const q = query(collection(db, "appointments"), where("clientId", "==", c.id));
+    const snap = await getDocs(q);
+
+    // 4. Adiciona cada agendamento encontrado ao lote
+    snap.docs.forEach((d) => {
+      const appRef = doc(db, "appointments", d.id);
+      batch.delete(appRef);
+    });
+
+    // 5. Executa todas as deleções de uma única vez no servidor
+    await batch.commit();
+    
+    alert("Cliente e agendamentos excluídos com sucesso!");
+  } catch (error) {
+    console.error("Erro ao excluir cliente:", error);
+    alert("Houve um erro ao tentar excluir.");
+  }
+};
 
   return (
     <div>
