@@ -18,7 +18,7 @@ const WEEKDAYS  = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
 const MONTHS    = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 const TODAY     = new Date().toISOString().split("T")[0];
 const AVATAR_COLORS = ["#FF6B00","#e85d04","#f48c06","#f72585","#7209b7","#3a86ff","#06d6a0"];
-
+const WHATSAPP_FELIPE = "5599984710709";
 const DEFAULT_SERVICES = [
   { name:"Corte Clássico", duration:30, price:45, icon:"✂️", desc:"Corte tradicional com acabamento perfeito" },
   { name:"Barba Completa", duration:30, price:35, icon:"🪒", desc:"Modelagem e hidratação da barba" },
